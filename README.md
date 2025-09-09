@@ -1,2 +1,2 @@
 # PyMatchmakingServer
-A simple matchmaking server written in Python
+A simple matchmaking server written with Python
