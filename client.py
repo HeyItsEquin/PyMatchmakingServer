@@ -1,6 +1,5 @@
 from server import *
 import socket
-import time
 
 class Client:
     tcp_sock: socket.socket
@@ -11,7 +10,7 @@ class Client:
         self.tcp_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
         self.tcp_sock.connect((self.s_info.addr, self.s_info.tcp_port))
-        time.sleep(2)
+        self.tcp_sock.send(b"Hello from client")
         self.tcp_sock.close()
 
 
