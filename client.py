@@ -13,8 +13,6 @@ class Client:
         self.tcp_sock.send(b"Hello from client")
         self.tcp_sock.close()
 
-
-
 def main():
     client = Client()
 
