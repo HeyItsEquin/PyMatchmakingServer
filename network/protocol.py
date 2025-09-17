@@ -5,12 +5,18 @@ import json
 class MessageType(IntEnum):
     PING = 0,
     CONNECT = 1,
-    ACK = 2
+    ACK = 2,
+    SYN = 3,
+    VER = 5,
+    REJ = 6
 
 class MessageHeader:
     type: MessageType
     name: str
-    id: UUID
+    id: UUID | int
+    
+    def __init__(self):
+        self.id = -1
 
 class Message:
     header: MessageHeader
@@ -24,6 +30,9 @@ class Message:
         str = f"Type: {MessageType(self.header.type).name}\nName: {self.header.name}\nUUID: {self.header.id}\n"
         json_str = json.dumps(self.body, indent=4)
         return str + json_str
+
+    def __bytes__(self):
+        return self.encode()
 
     @staticmethod
     def from_string(msg: str) -> "Message":
@@ -40,7 +49,8 @@ class Message:
         header = MessageHeader()
         header.type = json_header["type"]
         header.name = json_header["name"]
-        if "id" in json_header: header.id = json_header["id"] 
+        if "id" in json_header: header.id = UUID(json_header["id"])
+        else: header.id = -1
 
         message.body = json_body
         message.header = header
@@ -50,13 +60,18 @@ class Message:
     def encode(self, encoding = "utf-8"):
         header_dict = {
             "type": self.header.type,
-            "name": self.header.name,
-            "id": self.header.id.__str__()
+            "name": self.header.name
         }
+        
+        if self.header.id != -1:
+            header_dict["id"] = self.header.id.__str__()
 
         json_header = json.dumps(header_dict)
         json_body = json.dumps(self.body)
 
-        str = f"{json_header}\r\n{json_body}"
+        str = f"{json_header}\r\n{json_body}\0"
 
         return str.encode(encoding)
+
+    def send(self, sock):
+        sock.sendall(self.encode())
