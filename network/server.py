@@ -28,7 +28,7 @@ class Server:
         self.clients = {}
 
     def __stall(self):
-        while True:
+        while self.listening:
             try:
                 time.sleep(0.025)
             except KeyboardInterrupt:
@@ -81,10 +81,14 @@ class Server:
             
         res.send(sock)
         
+        logging.info("Informed client of verification")
+
         return 0
 
     def handle_tcp_connection(self, sock, addr):
-        self.init_tcp_handshake(sock)
+        v_success = self.init_tcp_handshake(sock)
+        if not v_success:
+            self.listening = False
 
         self.listening = False
 
@@ -92,7 +96,14 @@ class Server:
         logging.info("Server TCP socket bound and listening at 127.0.0.1:8001")
         while self.listening:
             self.tcp.listen()
-            cl_sock, cl_addr = self.tcp.accept()
+            try:
+                cl_sock, cl_addr = self.tcp.accept()
+            except OSError:
+                if not self.listening:
+                    break
+                else:
+                    logging.error("Error accepting new incoming connection on TCP socket")
+                    continue
             logging.info(f"Accepting new incoming connection ({cl_addr[0]}:{cl_addr[1]})")
 
             buf = recv_all_data(cl_sock)
