@@ -1,4 +1,6 @@
 import socket
+import threading
+from network.client import *
 from network.socket import *
 from network.protocol import *
 from uuid import *
@@ -9,6 +11,16 @@ class Server:
     udp: socket.socket
 
     listening: bool
+
+    tcp_thread: threading.Thread
+
+    clients: dict[UUID, Client]
+
+    def __init__(self):
+        self.tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.tcp_thread = threading.Thread(target=self.handle_tcp_listen)
+        self.clients = {}
 
     def __cleanup(self):
         logging.info("Closing server sockets")
@@ -89,10 +101,8 @@ class Server:
             self.listening = False
 
     def start(self):
-        self.tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.tcp.bind(("127.0.0.1", 8001))
         self.listening = True
-        self.handle_tcp_listen()
+        self.tcp_thread.start()
 
         self.__cleanup()
