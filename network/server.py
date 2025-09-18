@@ -5,6 +5,7 @@ from network.socket import *
 from network.protocol import *
 from uuid import *
 from util import logging
+from concurrent.futures import ThreadPoolExecutor
 
 class Server:
     tcp: socket.socket
@@ -14,12 +15,15 @@ class Server:
 
     tcp_thread: threading.Thread
 
+    tcp_thread_pool: ThreadPoolExecutor
+
     clients: dict[UUID, Client]
 
     def __init__(self):
         self.tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.tcp_thread = threading.Thread(target=self.handle_tcp_listen)
+        self.tcp_thread_pool = ThreadPoolExecutor()
         self.clients = {}
 
     def __cleanup(self):
@@ -72,7 +76,9 @@ class Server:
         return 0
 
     def handle_tcp_connection(self, sock, addr):
-        pass
+        self.init_tcp_handshake(sock)
+
+        self.listening = False
 
     def handle_tcp_listen(self):
         logging.info("Server TCP socket bound and listening at 127.0.0.1:8001")
@@ -93,12 +99,8 @@ class Server:
                 logging.error("Received message type <ACK> but no handshake was initialized")
                 cl_sock.close()
                 continue
-            
-            success = self.init_tcp_handshake(cl_sock)
-            
-            if success: cl_sock.close()
 
-            self.listening = False
+            self.tcp_thread_pool.submit(self.handle_tcp_connection, cl_sock, cl_addr)
 
     def start(self):
         self.tcp.bind(("127.0.0.1", 8001))
