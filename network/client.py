@@ -15,12 +15,11 @@ class Client:
     def init_tcp_handshake(self):
         socket.setdefaulttimeout(12.0)
         
-        
         msg = Message()
         msg.header.name = ""
         msg.header.type = MessageType.CONNECT
         
-        logging.info("Sending <CONNECT> request, awaiting <SYN> response from server")
+        logging.info("Sending <CONNECT> request, awaiting <SYN> response from server", True)
         msg.send(self.tcp)
         
         buf = recv_all_data(self.tcp)
@@ -30,9 +29,9 @@ class Client:
             logging.error(f"Authentication failed. Received <{MessageType(res.header.type).name}> response, expected <SYN>")
         
         assigned = UUID(res.body["assigned"])
-        logging.info(f"Received SYN response from servers")
+        logging.info(f"Received SYN response from servers", True)
         logging.info(f"Assigned UUID <{assigned}>")
-        logging.info(f"Sending ACK response to server, awaiting <VER> response")
+        logging.info(f"Sending ACK response to server, awaiting <VER> response", True)
         
         ack = Message()
         ack.header.type = MessageType.ACK
@@ -44,7 +43,7 @@ class Client:
         buf = recv_all_data(self.tcp)
         res = Message.from_string(buf)
         if res.header.type == MessageType.VER:
-            logging.info("Received <VER> response from server, ready to communicate")
+            logging.info("Ready to communicate")
         
         if res.header.type == MessageType.REJ:
             logging.info("Authentication rejected, likely ID mismatch")
@@ -55,7 +54,7 @@ class Client:
         self.tcp.connect(("127.0.0.1", 8001))
         
         logging.info("Connected to server")
-        logging.info("Initializing TCP handshake process")
+        logging.info("Initializing TCP handshake")
         
         self.init_tcp_handshake()
         

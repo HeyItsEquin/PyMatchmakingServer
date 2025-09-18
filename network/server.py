@@ -16,10 +16,10 @@ class Server:
         self.udp.close()
 
     def init_tcp_handshake(self, sock):
-        logging.info("Received <CONNECT> request from client")
+        logging.info("Received <CONNECT> request from client", True)
         cl_id = uuid4()
-        logging.info(f"Assigned client UUID <{cl_id}>")
-        logging.info("Sending <SYN> response with ID")
+        logging.info(f"Authenticating client with UUID <{cl_id}>")
+        logging.info("Sending <SYN> response with ID", True)
         res = Message()
         res.header.type = MessageType.SYN
         res.header.name = "<SERVER>"
@@ -28,7 +28,7 @@ class Server:
             
         res.send(sock)
 
-        logging.info("Awaiting <ACK> response from client")
+        logging.info("Awaiting <ACK> response from client", True)
             
         buf = recv_all_data(sock)
         msg = Message.from_string(buf)
@@ -49,7 +49,7 @@ class Server:
             sock.close()
             return -1
             
-        logging.info("Received <ACK> response from client, authentication success")
+        logging.info("Received <ACK> response from client; Authentication success", True)
             
         res = Message()
         res.header.type = MessageType.VER
