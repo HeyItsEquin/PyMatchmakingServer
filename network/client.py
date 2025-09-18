@@ -6,6 +6,7 @@ from network.socket import *
 class Client:
     tcp: socket.socket
     id: UUID
+    name: str
     
     def __init__(self):
         self.tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

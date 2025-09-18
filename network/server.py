@@ -59,16 +59,12 @@ class Server:
         
         return 0
 
-    def start(self):
-        self.tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    def handle_tcp_connection(self, sock, addr):
+        pass
 
-        self.tcp.bind(("127.0.0.1", 8001))
-        
-        self.listening = True
-
+    def handle_tcp_listen(self):
+        logging.info("Server TCP socket bound and listening at 127.0.0.1:8001")
         while self.listening:
-            logging.info("Server TCP socket bound and listening at 127.0.0.1:8001")
             self.tcp.listen()
             cl_sock, cl_addr = self.tcp.accept()
             logging.info(f"Accepting new incoming connection ({cl_addr[0]}:{cl_addr[1]})")
@@ -91,5 +87,12 @@ class Server:
             if success: cl_sock.close()
 
             self.listening = False
+
+    def start(self):
+        self.tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.tcp.bind(("127.0.0.1", 8001))
+        self.listening = True
+        self.handle_tcp_listen()
 
         self.__cleanup()

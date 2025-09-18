@@ -1,7 +1,7 @@
 from util.config import CFG
 
 def log(message: str):
-    if CFG["verbose"]: print(message)
+    if CFG["debug"]: print(message)
 
 def info(message: str):
     log(f"[INFO] {message}")
