@@ -2,7 +2,7 @@ def recv_all_data(sock, encoding = 'utf-8'):
     dat = b""
     while True:
         buf = sock.recv(256)
-        if not buf:
+        if not buf or buf == b'':
             break
         dat += buf
         if b'\0' in dat:

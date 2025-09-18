@@ -35,9 +35,12 @@ class Server:
                 break
 
     def __cleanup(self):
-        logging.info("Closing server sockets")
-        self.tcp.close()
-        self.udp.close()
+        try:
+            logging.info("Closing server sockets")
+            self.tcp.close()
+            self.udp.close()
+        except Exception as e:
+            logging.error(f"Error during server cleanup: {e}")
 
     def init_tcp_handshake(self, sock):
         logging.info("Received <CONNECT> request from client", True)
@@ -86,45 +89,65 @@ class Server:
         return 0
 
     def handle_tcp_connection(self, sock, addr):
-        v_success = self.init_tcp_handshake(sock)
+        try:
+            v_success = self.init_tcp_handshake(sock)
+        except Exception as e:
+            logging.error(f"TCP handshake failed: {e}")
+            v_success = -1
         if not v_success:
             self.listening = False
 
         self.listening = False
 
     def handle_tcp_listen(self):
-        logging.info("Server TCP socket bound and listening at 127.0.0.1:8001")
-        while self.listening:
-            self.tcp.listen()
-            try:
-                cl_sock, cl_addr = self.tcp.accept()
-            except OSError:
-                if not self.listening:
-                    break
-                else:
-                    logging.error("Error accepting new incoming connection on TCP socket")
+        try:
+            logging.info("Server TCP socket bound and listening at 127.0.0.1:8001")
+            while self.listening:
+                self.tcp.listen()
+                try:
+                    cl_sock, cl_addr = self.tcp.accept()
+                except OSError:
+                    if not self.listening:
+                        break
+                    else:
+                        logging.error("Error accepting new incoming connection on TCP socket")
+                        continue
+                logging.info(f"Accepting new incoming connection ({cl_addr[0]}:{cl_addr[1]})")
+
+                buf = recv_all_data(cl_sock)
+                msg = Message.from_string(buf)
+                
+                if msg.header.type != MessageType.CONNECT and msg.header.type != MessageType.ACK:
+                    logging.error("Did not receive message type <CONNECT> from client on TCP socket")
+                    cl_sock.close()
                     continue
-            logging.info(f"Accepting new incoming connection ({cl_addr[0]}:{cl_addr[1]})")
+                
+                if msg.header.type == MessageType.ACK:
+                    logging.error("Received message type <ACK> but no handshake was initialized")
+                    cl_sock.close()
+                    continue
 
-            buf = recv_all_data(cl_sock)
-            msg = Message.from_string(buf)
-            
-            if msg.header.type != MessageType.CONNECT and msg.header.type != MessageType.ACK:
-                logging.error("Did not receive message type <CONNECT> from client on TCP socket")
-                cl_sock.close()
-                continue
-            
-            if msg.header.type == MessageType.ACK:
-                logging.error("Received message type <ACK> but no handshake was initialized")
-                cl_sock.close()
-                continue
-
-            self.tcp_thread_pool.submit(self.handle_tcp_connection, cl_sock, cl_addr)
+                self.tcp_thread_pool.submit(self.handle_tcp_connection, cl_sock, cl_addr)
+        except ConnectionError as e:
+            logging.error(f"Connection error occurred: {e}")
+        except OSError as e:
+            if e.errno == 98:
+                logging.error("TCP socket address is already in use, please try again later")
+            else:
+                logging.error(f"Something went wrong with the TCP socket: {e}")
+        except KeyboardInterrupt:
+            self.listening = False
+        except Exception as e:
+            logging.error(f"Error in TCP listening thread: {e}")
 
     def start(self):
-        self.tcp.bind(("127.0.0.1", 8001))
-        self.listening = True
-        self.tcp_thread.start()
+        try:
+            self.tcp.bind(("127.0.0.1", 8001))
+            self.listening = True
+            self.tcp_thread.start()
 
-        self.__stall()
-        self.__cleanup()
+            self.__stall()
+            self.__cleanup()
+        except Exception as e:
+            logging.error(f"Something went wrong starting the server: {e}")
+            self.__cleanup()
