@@ -12,6 +12,11 @@ class Client:
         self.tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.id = None
         
+    def __cleanup(self):
+        logging.info("Closing client sockets")
+
+        self.tcp.close()
+
     def init_tcp_handshake(self):
         socket.setdefaulttimeout(12.0)
         
@@ -57,5 +62,5 @@ class Client:
         logging.info("Initializing TCP handshake")
         
         self.init_tcp_handshake()
-        
-        socket.setdefaulttimeout(None)
+
+        self.__cleanup()

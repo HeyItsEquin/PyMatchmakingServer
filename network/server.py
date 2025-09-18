@@ -1,5 +1,6 @@
 import socket
 import threading
+import time
 from network.client import *
 from network.socket import *
 from network.protocol import *
@@ -25,6 +26,13 @@ class Server:
         self.tcp_thread = threading.Thread(target=self.handle_tcp_listen)
         self.tcp_thread_pool = ThreadPoolExecutor()
         self.clients = {}
+
+    def __stall(self):
+        while True:
+            try:
+                time.sleep(0.025)
+            except KeyboardInterrupt:
+                break
 
     def __cleanup(self):
         logging.info("Closing server sockets")
@@ -107,4 +115,5 @@ class Server:
         self.listening = True
         self.tcp_thread.start()
 
+        self.__stall()
         self.__cleanup()
