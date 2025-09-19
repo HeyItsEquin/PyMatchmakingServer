@@ -15,12 +15,16 @@ class Client:
     server_udp_addr: Address
     
     connected: bool
+    shutdown: bool
     
     def __init__(self):
         self.tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.id = None
+        self.id = -1
         self.connected = False
+        self.shutdown = False
+        self.name = ""
+        self.addr = ("", 0)
         self.server_tcp_addr = ("127.0.0.1", 8001)
         self.server_udp_addr = ("127.0.0.1", 8002)
         
@@ -29,9 +33,14 @@ class Client:
             if self.connected:
                 self.disconnect()
 
+            if self.shutdown:
+                return
+
             logging.info("Closing client sockets")
 
             self.tcp.close()
+
+            self.shutdown = True
         except Exception as e:
             logging.error(f"Error occurred during client shutdown: {e}")
 
@@ -117,24 +126,11 @@ class Client:
         except Exception as e:
             logging.error(f"Something went wrong trying to send message to server: {e}")
     
-    def send_udp_message_unverified(self, type: MessageType, body = {}):
-        try:
-            msg = Message()
-            msg.header.type = type
-            msg.header.id = -1
-            msg.body = body
-
-            msg.sendto(self.udp, self.server_udp_addr)
-        except Exception as e:
-            logging.info(f"Something went wrong trying to send unverified message: {e}")
-
     def connect(self, name: str):
         try:
             self.tcp.connect(("127.0.0.1", 8001))
             self.udp.bind(("", 0))
 
-            logging.info(self.get_client_list())
-            
             logging.info("Connected to server")
             logging.info("Initializing TCP handshake")
             
@@ -143,27 +139,13 @@ class Client:
             self.connected = True 
 
             self.set_server_identity(name)
+        except ConnectionRefusedError as e:
+            logging.error(f"Connection refused (is the server running?): {e}")
+            self.__cleanup()
         except Exception as e:
             logging.error(f"Something went wrong when trying to connect to the server: {e}")
             self.__cleanup()
             
-    def get_client_list(self):
-        try:          
-            self.send_udp_message_unverified(MessageType.CLIENTLIST)
-            logging.info("Requested client list from server", True)
-
-            dat = recv_all_data_udp(self.udp)
-
-            msg = Message.from_string(dat)
-            if msg.header.type != MessageType.CLIENTLIST:
-                logging.error(f"Expected <CLIENTLIST> response from server, got <{MessageType(msg.header.type).name}>")
-                return []
-
-            return msg.body["clients"]
-        except Exception as e:
-            logging.error(f"Something went wrong trying to get client list from server: {e}")
-            return []
-
     def disconnect(self):   
         try:
             if not self.connected:

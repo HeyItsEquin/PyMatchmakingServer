@@ -16,6 +16,10 @@ class MessageType(IntEnum):
 
     CLIENTLIST = 7
 
+UnverifiedOkMessageType = [
+    MessageType.CLIENTLIST
+]
+
 class MessageHeader:
     type: MessageType
     name: str

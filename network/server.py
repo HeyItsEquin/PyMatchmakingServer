@@ -122,7 +122,6 @@ class Server:
         
     def handle_tcp_listen(self):
         try:
-            logging.info("Server TCP socket bound and listening at 127.0.0.1:8001")
             while self.listening:
                 self.tcp.listen()
                 try:
@@ -165,10 +164,10 @@ class Server:
     def handle_udp_request(self, data, addr):
         try:
             msg = Message.from_string(data)
-            if (not msg.header.id or msg.header.id == -1) and msg.header.type != MessageType.CLIENTLIST:
+            if not msg.header.id or msg.header.id == -1:
                 logging.warn("Received UDP message without valid UUID, discarding")
                 return
-            if (msg.header.id not in self.manager.clients) and msg.header.type != MessageType.CLIENTLIST:
+            if msg.header.id not in self.manager.clients:
                 logging.warn(f"Received UDP message from unknown client, discarding")
                 return
             client = self.manager.clients[msg.header.id]
@@ -178,22 +177,11 @@ class Server:
                 logging.info(f"Received <DISCONNECT> message from client UUID <{client.id}>, removing client", True)
                 self.manager.remove_client(client)
                 return
-            if msg.header.type == MessageType.CLIENTLIST:
-                res = Message()
-                res.header.type = MessageType.CLIENTLIST
-                res.header.name = "<SERVER>"
-                res.body["clients"] = self.manager.client_list()
-
-                logging.info("Sending <CLIENTLIST> response", True)
-                res.send_udp(self.udp, addr)
-
-                logging.info("Sent <CLIENTLIST> response", True)
         except Exception as e:
             logging.error(f"Something went wrong parsing UDP request: {e}")
 
     def handle_udp_connection(self):
         try:
-            logging.info("Server UDP socket bound and listening at 127.0.0.1:8002")
             while self.listening:
                 dat = None
                 try:
@@ -217,6 +205,7 @@ class Server:
             self.listening = True
             self.tcp_thread.start()
             self.udp_thread.start()
+            logging.info("Server online, awaiting incoming connections")
 
             self.__stall()
             self.__cleanup()
