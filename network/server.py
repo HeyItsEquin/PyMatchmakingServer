@@ -1,7 +1,7 @@
 import socket
 import threading
 import time
-from network.client import *
+from client.client import *
 from network.socket import *
 from network.protocol import *
 from uuid import *
@@ -150,10 +150,17 @@ class Server:
         except Exception as e:
             logging.error(f"Error in TCP listening thread: {e}")
 
+    def handle_udp_request(self, data, addr):
+        pass
+
     def handle_udp_connection(self):
         try:
             while True:
-                break
+                dat, addr = recv_all_data_udp(self.udp)
+                if not dat:
+                    continue
+                self.udp_thread_poll.submit(self.handle_udp_request, dat, addr)
+
         except Exception as e:
             logging.error(f"Something went wrong trying to parse UDP request: {e}")
 

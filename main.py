@@ -2,7 +2,7 @@ import argparse
 from network import server
 from network.socket import *
 from network.protocol import *
-from network.client import *
+from client.client import *
 from uuid import *
 from util.config import *
 
