@@ -45,9 +45,9 @@ class Client:
                 logging.error(f"Authentication failed. Received <{MessageType(res.header.type).name}> response, expected <SYN>")
             
             assigned = UUID(res.body["assigned"])
-            logging.info(f"Received SYN response from servers", True)
+            logging.info("Received SYN response from servers", True)
             logging.info(f"Assigned UUID <{assigned}>")
-            logging.info(f"Sending ACK response to server, awaiting <VER> response", True)
+            logging.info("Sending ACK response to server, awaiting <VER> response", True)
             
             ack = Message()
             ack.header.type = MessageType.ACK
@@ -65,14 +65,14 @@ class Client:
                 logging.info("Authentication rejected, likely ID mismatch")
             
             self.id = assigned
-        except ConnectionRefusedError as e:
+        except ConnectionRefusedError:
             logging.error("Connection refused. Is the server running?")
             self.__cleanup()
-        except socket.error as e:
-            logging.error(f"Socket error during TCP handshake: {e}")
-            self.__cleanup()
-        except socket.timeout:
+        except TimeoutError:
             logging.error("TCP handshake time out. The server may not be running")
+            self.__cleanup()
+        except OSError as e:
+            logging.error(f"Socket error during TCP handshake: {e}")
             self.__cleanup()
         except Exception as e:
             logging.error(f"An error occurred during TCP handshake: {e}")

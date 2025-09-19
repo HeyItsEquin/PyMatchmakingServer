@@ -15,8 +15,10 @@ class Server:
     listening: bool
 
     tcp_thread: threading.Thread
+    udp_thread: threading.Thread
 
     tcp_thread_pool: ThreadPoolExecutor
+    udp_thread_poll: ThreadPoolExecutor
 
     clients: dict[UUID, Client]
 
@@ -24,7 +26,9 @@ class Server:
         self.tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.tcp_thread = threading.Thread(target=self.handle_tcp_listen)
+        self.udp_thread = threading.Thread(target=self.handle_udp_connection)
         self.tcp_thread_pool = ThreadPoolExecutor()
+        self.udp_thread_poll = ThreadPoolExecutor()
         self.clients = {}
 
     def __stall(self):
@@ -102,6 +106,8 @@ class Server:
         cl.id = v_success
         cl.addr = addr
         
+        self.clients[v_success] = cl
+        
     def handle_tcp_listen(self):
         try:
             logging.info("Server TCP socket bound and listening at 127.0.0.1:8001")
@@ -111,7 +117,7 @@ class Server:
                     cl_sock, cl_addr = self.tcp.accept()
                 except OSError as e:
                     if e.errno == 10038:
-                        pass # break
+                        break
                     else:
                         logging.error("Error accepting new incoming connecton on TCP socket")
                 logging.info(f"Accepting new incoming connection ({cl_addr[0]}:{cl_addr[1]})")
@@ -144,11 +150,19 @@ class Server:
         except Exception as e:
             logging.error(f"Error in TCP listening thread: {e}")
 
+    def handle_udp_connection(self):
+        try:
+            while True:
+                break
+        except Exception as e:
+            logging.error(f"Something went wrong trying to parse UDP request: {e}")
+
     def start(self):
         try:
             self.tcp.bind(("127.0.0.1", 8001))
             self.listening = True
             self.tcp_thread.start()
+            self.udp_thread.start()
 
             self.__stall()
             self.__cleanup()
