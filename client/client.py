@@ -1,7 +1,7 @@
 import socket
 from util import logging
 from network.protocol import Message, MessageType, Address
-from network.socket import recv_all_data
+from network.socket import recv_all_data, recv_all_data_udp
 from uuid import UUID
 
 class Client:
@@ -26,6 +26,9 @@ class Client:
         
     def __cleanup(self):
         try:
+            if self.connected:
+                self.disconnect()
+
             logging.info("Closing client sockets")
 
             self.tcp.close()
@@ -114,9 +117,23 @@ class Client:
         except Exception as e:
             logging.error(f"Something went wrong trying to send message to server: {e}")
     
+    def send_udp_message_unverified(self, type: MessageType, body = {}):
+        try:
+            msg = Message()
+            msg.header.type = type
+            msg.header.id = -1
+            msg.body = body
+
+            msg.sendto(self.udp, self.server_udp_addr)
+        except Exception as e:
+            logging.info(f"Something went wrong trying to send unverified message: {e}")
+
     def connect(self, name: str):
         try:
             self.tcp.connect(("127.0.0.1", 8001))
+            self.udp.bind(("", 0))
+
+            logging.info(self.get_client_list())
             
             logging.info("Connected to server")
             logging.info("Initializing TCP handshake")
@@ -130,6 +147,34 @@ class Client:
             logging.error(f"Something went wrong when trying to connect to the server: {e}")
             self.__cleanup()
             
+    def get_client_list(self):
+        try:          
+            self.send_udp_message_unverified(MessageType.CLIENTLIST)
+            logging.info("Requested client list from server", True)
+
+            dat = recv_all_data_udp(self.udp)
+
+            msg = Message.from_string(dat)
+            if msg.header.type != MessageType.CLIENTLIST:
+                logging.error(f"Expected <CLIENTLIST> response from server, got <{MessageType(msg.header.type).name}>")
+                return []
+
+            return msg.body["clients"]
+        except Exception as e:
+            logging.error(f"Something went wrong trying to get client list from server: {e}")
+            return []
+
+    def disconnect(self):   
+        try:
+            if not self.connected:
+                return
+
+            self.send_udp_message(MessageType.DISCONNECT)
+
+            self.connected = False
+        except Exception as e:
+            logging.error(f"Something went wrong trying to disconnect from server: {e}")
+
     def cleanup(self):
         self.__cleanup()
         

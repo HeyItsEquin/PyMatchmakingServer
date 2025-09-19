@@ -4,6 +4,7 @@ from util.config import CFG
 from uuid import UUID
 from network.protocol import Address
 from typing import overload
+from json import loads
 
 ClientList = dict[UUID, Client]
 
@@ -25,6 +26,16 @@ class ClientManager:
         del self.clients[client.id]
         return True
         
+    def client_list(self):
+        lst = []
+        for client in self.clients:
+            lst.append(loads({
+                "id": str(client.id),
+                "name": client.name
+            }))
+
+        return lst
+
     @overload
     def client_exists(self, id: UUID):
         return id in self.clients

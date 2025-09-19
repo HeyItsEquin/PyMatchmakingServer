@@ -162,18 +162,32 @@ class Server:
         except Exception as e:
             logging.error(f"Error in TCP listening thread: {e}")
 
-    def handle_udp_request(self, data):
+    def handle_udp_request(self, data, addr):
         try:
             msg = Message.from_string(data)
-            if not msg.header.id or msg.header.id == -1:
+            if (not msg.header.id or msg.header.id == -1) and msg.header.type != MessageType.CLIENTLIST:
                 logging.warn("Received UDP message without valid UUID, discarding")
                 return
-            if msg.header.id not in self.manager.clients:
+            if (msg.header.id not in self.manager.clients) and msg.header.type != MessageType.CLIENTLIST:
                 logging.warn(f"Received UDP message from unknown client, discarding")
                 return
             client = self.manager.clients[msg.header.id]
             if msg.header.type == MessageType.IDENTITY:
                 self.handle_message_identity(msg, client)
+            if msg.header.type == MessageType.DISCONNECT:
+                logging.info(f"Received <DISCONNECT> message from client UUID <{client.id}>, removing client", True)
+                self.manager.remove_client(client)
+                return
+            if msg.header.type == MessageType.CLIENTLIST:
+                res = Message()
+                res.header.type = MessageType.CLIENTLIST
+                res.header.name = "<SERVER>"
+                res.body["clients"] = self.manager.client_list()
+
+                logging.info("Sending <CLIENTLIST> response", True)
+                res.send_udp(self.udp, addr)
+
+                logging.info("Sent <CLIENTLIST> response", True)
         except Exception as e:
             logging.error(f"Something went wrong parsing UDP request: {e}")
 
@@ -183,7 +197,7 @@ class Server:
             while self.listening:
                 dat = None
                 try:
-                    dat, _ = recv_all_data_udp(self.udp)
+                    dat, addr = recv_all_data_udp(self.udp)
                 except OSError as e:
                     if e.errno == 10038:
                         pass
@@ -192,8 +206,7 @@ class Server:
                         continue
                 if not dat:
                     continue
-                logging.info("Received new UDP request")
-                self.udp_thread_pool.submit(self.handle_udp_request, dat)
+                self.udp_thread_pool.submit(self.handle_udp_request, dat, addr)
         except Exception as e:
             logging.error(f"Something went wrong trying to parse UDP request: {e}")
 

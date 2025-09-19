@@ -12,6 +12,9 @@ class MessageType(IntEnum):
     REJECTED = 4,
 
     IDENTITY = 5,
+    DISCONNECT = 6,
+
+    CLIENTLIST = 7
 
 class MessageHeader:
     type: MessageType
@@ -28,6 +31,8 @@ class Message:
     def __init__(self):
         self.header = MessageHeader()
         self.body = {}
+        self.header.name = ""
+        self.header.id = -1
 
     def __str__(self):
         str = f"Type: {MessageType(self.header.type).name}\nName: {self.header.name}\nUUID: {self.header.id}\n"
