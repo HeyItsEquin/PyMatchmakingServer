@@ -1,5 +1,5 @@
 from enum import IntEnum
-from uuid import *
+from uuid import UUID
 import json
 
 Address = type[tuple[str, int]]

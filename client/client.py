@@ -1,7 +1,8 @@
 import socket
 from util import logging
-from network.protocol import *
-from network.socket import *
+from network.protocol import Message, MessageType, Address
+from network.socket import recv_all_data
+from uuid import UUID
 
 class Client:
     tcp: socket.socket

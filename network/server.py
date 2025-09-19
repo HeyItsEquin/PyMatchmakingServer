@@ -1,10 +1,10 @@
 import socket
 import threading
 import time
-from client.client import *
-from network.socket import *
-from network.protocol import *
-from uuid import *
+from client.client import Client
+from network.socket import recv_all_data, recv_all_data_udp
+from network.protocol import Message, MessageType
+from uuid import UUID, uuid4
 from util import logging
 from concurrent.futures import ThreadPoolExecutor
 
@@ -160,7 +160,6 @@ class Server:
                 if not dat:
                     continue
                 self.udp_thread_poll.submit(self.handle_udp_request, dat, addr)
-
         except Exception as e:
             logging.error(f"Something went wrong trying to parse UDP request: {e}")
 
