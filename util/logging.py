@@ -6,10 +6,10 @@ def log(message: str, verbose = False):
         if not verbose: print(message)
 
 def info(message: str, verbose = False):
-    log(f"[INFO] {message}", verbose)
+    log(f"\x1b[36m[INFO]\x1b[0m {message}", verbose)
 
 def warn(message: str, verbose = False):
-    log(f"[WARN] {message}", verbose)
+    log(f"\x1b[33m[WARN]\x1b[0m {message}", verbose)
 
 def error(message: str, verbose = False):
-    log(f"[ERROR] {message}", verbose)
+    log(f"\x1b[31m[ERROR]\x1b[0m {message}", verbose)

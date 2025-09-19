@@ -109,12 +109,11 @@ class Server:
                 self.tcp.listen()
                 try:
                     cl_sock, cl_addr = self.tcp.accept()
-                except OSError:
-                    if not self.listening:
-                        break
+                except OSError as e:
+                    if e.errno == 10038:
+                        pass # break
                     else:
-                        logging.error("Error accepting new incoming connection on TCP socket")
-                        continue
+                        logging.error("Error accepting new incoming connecton on TCP socket")
                 logging.info(f"Accepting new incoming connection ({cl_addr[0]}:{cl_addr[1]})")
 
                 buf = recv_all_data(cl_sock)
@@ -136,6 +135,8 @@ class Server:
         except OSError as e:
             if e.errno == 98:
                 logging.error("TCP socket address is already in use, please try again later")
+            if e.errno == 10038:
+                return
             else:
                 logging.error(f"Something went wrong with the TCP socket: {e}")
         except KeyboardInterrupt:

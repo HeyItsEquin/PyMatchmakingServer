@@ -2,7 +2,7 @@ from enum import IntEnum
 from uuid import *
 import json
 
-Address = tuple[str, int]
+Address = type[tuple[str, int]]
 
 class MessageType(IntEnum):
     PING = 0,
