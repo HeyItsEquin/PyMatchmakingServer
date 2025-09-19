@@ -22,7 +22,8 @@ if verbose:
 
 if prog_type == "c" or prog_type == "client":
     cl = Client()
-    cl.connect()
+    cl.connect("Equin :3")
+    cl.cleanup()
 
 if prog_type == "s" or prog_type == "server":
     s = server.Server()

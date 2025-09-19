@@ -5,12 +5,19 @@ from network.socket import *
 
 class Client:
     tcp: socket.socket
+    udp: socket.socket
     id: UUID
     name: str
+    addr: Address
+    
+    server_addr: Address
+    
+    connected: bool
     
     def __init__(self):
         self.tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.id = None
+        self.connected = False
         
     def __cleanup(self):
         try:
@@ -51,10 +58,10 @@ class Client:
             
             buf = recv_all_data(self.tcp)
             res = Message.from_string(buf)
-            if res.header.type == MessageType.VER:
+            if res.header.type == MessageType.VERIFIED:
                 logging.info("Ready to communicate")
             
-            if res.header.type == MessageType.REJ:
+            if res.header.type == MessageType.REJECTED:
                 logging.info("Authentication rejected, likely ID mismatch")
             
             self.id = assigned
@@ -71,7 +78,13 @@ class Client:
             logging.error(f"An error occurred during TCP handshake: {e}")
             self.__cleanup()
         
-    def connect(self):
+    def set_server_identity(self, name: str):
+        try:
+            pass
+        except Exception as e:
+            logging.error(f"Something went wrong trying to send identity to server: {e}")
+        
+    def connect(self, name: str):
         try:
             self.tcp.connect(("127.0.0.1", 8001))
             
@@ -80,7 +93,11 @@ class Client:
             
             self.init_tcp_handshake()
 
-            self.__cleanup()
+            self.set_server_identity(name)
         except Exception as e:
             logging.error(f"Something went wrong when trying to connect to the server: {e}")
             self.__cleanup()
+            
+    def cleanup(self):
+        self.__cleanup()
+        

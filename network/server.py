@@ -63,42 +63,45 @@ class Server:
         if msg.header.type != MessageType.ACK:
             logging.error("Did not receive message type <ACK> from client")
             sock.close()
-            return -1
+            return None
             
         if msg.header.id != cl_id:
             logging.error("ID mismatch in <ACK> response from client")
             logging.error(f"Expected UUID <{cl_id}>; received <{msg.header.id}>")
             res = Message()
-            res.header.type = MessageType.REJ
+            res.header.type = MessageType.REJECTED
             res.header.name = "<SERVER>"
                 
             res.send(sock)
             sock.close()
-            return -1
+            return None
             
         logging.info("Received <ACK> response from client; Authentication success", True)
             
         res = Message()
-        res.header.type = MessageType.VER
+        res.header.type = MessageType.VERIFIED
         res.header.name = "<SERVER>"
             
         res.send(sock)
         
         logging.info("Informed client of verification")
-
-        return 0
+        
+        return cl_id
 
     def handle_tcp_connection(self, sock, addr):
         try:
-            v_success = self.init_tcp_handshake(sock)
+            v_success: UUID | None = self.init_tcp_handshake(sock)
         except Exception as e:
             logging.error(f"TCP handshake failed: {e}")
-            v_success = -1
+            v_success = None
         if not v_success:
-            self.listening = False
-
-        self.listening = False
-
+            logging.error(f"TCP handshake failed")
+            return
+        
+        cl = Client()
+        cl.id = v_success
+        cl.addr = addr
+        
     def handle_tcp_listen(self):
         try:
             logging.info("Server TCP socket bound and listening at 127.0.0.1:8001")

@@ -2,13 +2,16 @@ from enum import IntEnum
 from uuid import *
 import json
 
+Address = tuple[str, int]
+
 class MessageType(IntEnum):
     PING = 0,
     CONNECT = 1,
     ACK = 2,
     SYN = 3,
-    VER = 5,
-    REJ = 6
+    VERIFIED = 5,
+    REJECTED = 6,
+    IDENTITY = 7
 
 class MessageHeader:
     type: MessageType
