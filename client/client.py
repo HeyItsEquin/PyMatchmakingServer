@@ -11,15 +11,18 @@ class Client:
     name: str
     addr: Address
     
-    server_addr: Address
+    server_tcp_addr: Address
+    server_udp_addr: Address
     
     connected: bool
     
     def __init__(self):
         self.tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.id = None
         self.connected = False
-        self.server_addr = ("127.0.0.1", 8001)
+        self.server_tcp_addr = ("127.0.0.1", 8001)
+        self.server_udp_addr = ("127.0.0.1", 8002)
         
     def __cleanup(self):
         try:
@@ -82,16 +85,18 @@ class Client:
         
     def set_server_identity(self, name: str):
         try:
-            msg = Message()
-            msg.header.type = MessageType.IDENTITY
-            msg.header.name = name
-            msg.header.id = self.id
-
+            if not self.id:
+                logging.error("Client ID is not set. Cannot send identity to server")
+                return
             
+            self.name = name
+            self.send_udp_message(MessageType.IDENTITY)
+
+            logging.info(f"Sent updated client identity to server: Name=<\"{self.name}\">", True)
         except Exception as e:
             logging.error(f"Something went wrong trying to send identity to server: {e}")
         
-    def send_message(self, type: MessageType, body = {}):
+    def send_udp_message(self, type: MessageType, body = {}):
         try:
             if not self.connected:
                 return
@@ -99,11 +104,12 @@ class Client:
             msg = Message()
             msg.header.type = type
             msg.header.name = self.name
-            msg.header.id = self.id
+            msg.header.id = self.id or -1
 
             msg.body = body
 
-            # TODO: Something I'm sure
+            logging.info(f"Sending <{type.name}> message to server", True)
+            msg.sendto(self.udp, self.server_udp_addr)
 
         except Exception as e:
             logging.error(f"Something went wrong trying to send message to server: {e}")
@@ -116,6 +122,8 @@ class Client:
             logging.info("Initializing TCP handshake")
             
             self.init_tcp_handshake()
+
+            self.connected = True 
 
             self.set_server_identity(name)
         except Exception as e:
