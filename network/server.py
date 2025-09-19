@@ -4,7 +4,7 @@ import time
 from client.client import Client
 from client.manager import ClientManager
 from network.socket import recv_all_data, recv_all_data_udp
-from network.protocol import Message, MessageType
+from network.protocol import Message, MessageType, UnverifiedOkMessageType
 from uuid import UUID, uuid4
 from util import logging
 from concurrent.futures import ThreadPoolExecutor
@@ -164,19 +164,30 @@ class Server:
     def handle_udp_request(self, data, addr):
         try:
             msg = Message.from_string(data)
-            if not msg.header.id or msg.header.id == -1:
-                logging.warn("Received UDP message without valid UUID, discarding")
-                return
-            if msg.header.id not in self.manager.clients:
-                logging.warn(f"Received UDP message from unknown client, discarding")
-                return
-            client = self.manager.clients[msg.header.id]
+            if not msg.header.type in UnverifiedOkMessageType:
+                if not msg.header.id or msg.header.id == -1:
+                    logging.warn("Received UDP message without valid UUID, discarding")
+                    return
+                if msg.header.id not in self.manager.clients:
+                    logging.warn(f"Received UDP message from unknown client, discarding")
+                    return
+                client = self.manager.clients[msg.header.id]
             if msg.header.type == MessageType.IDENTITY:
                 self.handle_message_identity(msg, client)
             if msg.header.type == MessageType.DISCONNECT:
                 logging.info(f"Received <DISCONNECT> message from client UUID <{client.id}>, removing client", True)
                 self.manager.remove_client(client)
                 return
+            if msg.header.type == MessageType.ANONTEST:
+                logging.info(f"Received <ANONTEST> message, so it like... works :3", True)
+
+                res = Message()
+                res.header.type = MessageType.ANONTEST
+                res.header.name = "<SERVER>"
+                res.header.id = -1
+                res.body["message"] = "Blahblahblahblah :3"
+
+                res.sendto(self.udp, addr)
         except Exception as e:
             logging.error(f"Something went wrong parsing UDP request: {e}")
 

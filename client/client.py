@@ -1,12 +1,19 @@
 import socket
 from util import logging
 from network.protocol import Message, MessageType, Address
-from network.socket import recv_all_data, recv_all_data_udp
+from network.socket import recv_all_data, recv_all_data_udp, is_valid_socket
+from threading import Thread
 from uuid import UUID
+from time import sleep
+
+ADDRESS_ANY = ("", 0)
 
 class Client:
     tcp: socket.socket
     udp: socket.socket
+
+    udp_thread: Thread
+
     id: UUID
     name: str
     addr: Address
@@ -15,13 +22,16 @@ class Client:
     server_udp_addr: Address
     
     connected: bool
+    initialized: bool
     shutdown: bool
     
     def __init__(self):
         self.tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.udp_thread = Thread(target=self.handle_udp_message)
         self.id = -1
         self.connected = False
+        self.initialized = False
         self.shutdown = False
         self.name = ""
         self.addr = ("", 0)
@@ -36,9 +46,12 @@ class Client:
             if self.shutdown:
                 return
 
+            self.initialized = False
+
             logging.info("Closing client sockets")
 
             self.tcp.close()
+            self.udp.close()
 
             self.shutdown = True
         except Exception as e:
@@ -108,6 +121,20 @@ class Client:
         except Exception as e:
             logging.error(f"Something went wrong trying to send identity to server: {e}")
         
+    def handle_udp_message(self):
+        try:
+            while self.initialized and not self.shutdown and is_valid_socket(self.udp):
+                buf, addr = recv_all_data_udp(self.udp)
+                msg = Message.from_string(buf)
+
+                if msg.header.type == MessageType.ANONTEST:
+                    logging.info(f"Received <ANONTEST> from server: {msg.body['message']}", True)
+                    continue
+                logging.info(f"Received <{MessageType(msg.header.type).name}> message from server", True)
+        except Exception as e:
+            logging.error(f"Something went wrong in UDP listener thread: {e}")
+            return
+
     def send_udp_message(self, type: MessageType, body = {}):
         try:
             if not self.connected:
@@ -126,17 +153,36 @@ class Client:
         except Exception as e:
             logging.error(f"Something went wrong trying to send message to server: {e}")
     
+    def send_anon_udp_message(self, type: MessageType, body = {}):
+        try:
+            msg = Message()
+            msg.header.type = type
+            msg.header.name = ""
+            msg.header.id = -1
+            msg.body = body
+
+            msg.sendto(self.udp, self.server_udp_addr)
+        except Exception as e:
+            logging.error(f"Something went wrong trying to send anonymous message: {e}")
+            return        
+
     def connect(self, name: str):
         try:
-            self.tcp.connect(("127.0.0.1", 8001))
-            self.udp.bind(("", 0))
+            self.tcp.connect(self.server_tcp_addr)
+            self.udp.bind(ADDRESS_ANY)
+
+            self.initialized = True
+
+            self.udp_thread.start()
+
+            self.send_anon_udp_message(MessageType.ANONTEST)
 
             logging.info("Connected to server")
             logging.info("Initializing TCP handshake")
             
             self.init_tcp_handshake()
 
-            self.connected = True 
+            self.connected = True
 
             self.set_server_identity(name)
         except ConnectionRefusedError as e:

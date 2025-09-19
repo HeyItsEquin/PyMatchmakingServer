@@ -1,5 +1,6 @@
 from enum import IntEnum
 from uuid import UUID
+import socket
 import json
 
 Address = type[tuple[str, int]]
@@ -14,10 +15,10 @@ class MessageType(IntEnum):
     IDENTITY = 5,
     DISCONNECT = 6,
 
-    CLIENTLIST = 7
+    ANONTEST = 7
 
 UnverifiedOkMessageType = [
-    MessageType.CLIENTLIST
+    MessageType.ANONTEST
 ]
 
 class MessageHeader:
@@ -88,5 +89,9 @@ class Message:
     def send(self, sock):
         sock.sendall(self.encode())
 
-    def sendto(self, sock, addr: Address):
+    def sendto(self, sock: socket.socket, addr: Address):
+        if sock.fileno == -1:
+            e = OSError("Socket is closed")
+            e.errno = 10038
+            raise e
         sock.sendto(self.encode(), addr)
