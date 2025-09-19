@@ -2,6 +2,7 @@ import socket
 import threading
 import time
 from client.client import Client
+from client.manager import ClientManager
 from network.socket import recv_all_data, recv_all_data_udp
 from network.protocol import Message, MessageType
 from uuid import UUID, uuid4
@@ -20,7 +21,7 @@ class Server:
     tcp_thread_pool: ThreadPoolExecutor
     udp_thread_poll: ThreadPoolExecutor
 
-    clients: dict[UUID, Client]
+    manager: ClientManager
 
     def __init__(self):
         self.tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -29,7 +30,7 @@ class Server:
         self.udp_thread = threading.Thread(target=self.handle_udp_connection)
         self.tcp_thread_pool = ThreadPoolExecutor()
         self.udp_thread_poll = ThreadPoolExecutor()
-        self.clients = {}
+        self.manager = ClientManager()
 
     def __stall(self):
         while self.listening:
@@ -45,6 +46,9 @@ class Server:
             self.udp.close()
         except Exception as e:
             logging.error(f"Error during server cleanup: {e}")
+
+    def handle_message_identity(self, msg: Message, client: Client):
+        pass
 
     def init_tcp_handshake(self, sock):
         logging.info("Received <CONNECT> request from client", True)
@@ -105,8 +109,7 @@ class Server:
         cl = Client()
         cl.id = v_success
         cl.addr = addr
-        
-        self.clients[v_success] = cl
+        self.manager.add_client(cl)
         
     def handle_tcp_listen(self):
         try:
@@ -150,8 +153,20 @@ class Server:
         except Exception as e:
             logging.error(f"Error in TCP listening thread: {e}")
 
-    def handle_udp_request(self, data, addr):
-        pass
+    def handle_udp_request(self, data):
+        try:
+            msg = Message.from_string(data)
+            if not msg.header.id or msg.header.id == -1:
+                logging.warn("Received UDP message without valid UUID, discarding")
+                return
+            if msg.header.id not in self.clients:
+                logging.warn(f"Received UDP message from unknown client, discarding")
+                return
+            client = self.clients[msg.header.id]
+            if msg.header.type == MessageType.IDENTITY:
+                self.handle_message_identity(msg, client)
+        except Exception as e:
+            logging.error(f"Something went wrong parsing UDP request: {e}")
 
     def handle_udp_connection(self):
         try:

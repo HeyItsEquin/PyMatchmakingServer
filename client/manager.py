@@ -3,9 +3,12 @@ from util import logging
 from util.config import CFG
 from uuid import UUID
 from network.protocol import Address
+from typing import overload
+
+ClientList = dict[UUID, Client]
 
 class ClientManager:
-    clients: dict[UUID, Client]
+    clients: ClientList
 
     def __init__(self):
         self.clients = {}
@@ -21,9 +24,14 @@ class ClientManager:
             return False
         del self.clients[client.id]
         return True
+        
+    @overload
+    def client_exists(self, id: UUID):
+        return id in self.clients
     
-    def get_client_by_addr(self, addr: Address):
+    @overload
+    def client_exists(self, addr: Address):
         for client in self.clients.values():
             if client.addr == addr:
-                return client
-        return None
+                return True
+        return False

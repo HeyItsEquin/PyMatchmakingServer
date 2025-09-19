@@ -5,13 +5,13 @@ import json
 Address = type[tuple[str, int]]
 
 class MessageType(IntEnum):
-    PING = 0,
-    CONNECT = 1,
-    ACK = 2,
-    SYN = 3,
-    VERIFIED = 5,
-    REJECTED = 6,
-    IDENTITY = 7
+    CONNECT = 0,
+    ACK = 1,
+    SYN = 2,
+    VERIFIED = 3,
+    REJECTED = 4,
+
+    IDENTITY = 5,
 
 class MessageHeader:
     type: MessageType
@@ -78,3 +78,6 @@ class Message:
 
     def send(self, sock):
         sock.sendall(self.encode())
+
+    def sendto(self, sock, addr: Address):
+        sock.sendto(self.encode(), addr)

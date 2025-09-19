@@ -19,6 +19,7 @@ class Client:
         self.tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.id = None
         self.connected = False
+        self.server_addr = ("127.0.0.1", 8001)
         
     def __cleanup(self):
         try:
@@ -81,10 +82,32 @@ class Client:
         
     def set_server_identity(self, name: str):
         try:
-            pass
+            msg = Message()
+            msg.header.type = MessageType.IDENTITY
+            msg.header.name = name
+            msg.header.id = self.id
+
+            
         except Exception as e:
             logging.error(f"Something went wrong trying to send identity to server: {e}")
         
+    def send_message(self, type: MessageType, body = {}):
+        try:
+            if not self.connected:
+                return
+            
+            msg = Message()
+            msg.header.type = type
+            msg.header.name = self.name
+            msg.header.id = self.id
+
+            msg.body = body
+
+            # TODO: Something I'm sure
+
+        except Exception as e:
+            logging.error(f"Something went wrong trying to send message to server: {e}")
+    
     def connect(self, name: str):
         try:
             self.tcp.connect(("127.0.0.1", 8001))
