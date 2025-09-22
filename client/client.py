@@ -192,7 +192,7 @@ class Client:
             logging.error(f"Something went wrong when trying to connect to the server: {e}")
             self.__cleanup()
             
-    def disconnect(self):   
+    def disconnect(self):
         try:
             if not self.connected:
                 return
