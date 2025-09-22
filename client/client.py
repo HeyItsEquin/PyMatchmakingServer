@@ -123,7 +123,7 @@ class Client:
         
     def handle_udp_message(self):
         try:
-            while self.initialized and not self.shutdown and is_valid_socket(self.udp):
+            while self.initialized and not self.shutdown:
                 buf, addr = recv_all_data_udp(self.udp)
                 msg = Message.from_string(buf)
 
