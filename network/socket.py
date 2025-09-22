@@ -1,3 +1,5 @@
+from socket import socket
+
 def recv_all_data(sock, encoding = 'utf-8'):
     dat = b""
     while True:
@@ -19,12 +21,5 @@ def recv_all_data_udp(sock, encoding = 'utf-8'):
         return line.decode(encoding), addr
     return buf.decode(encoding), addr
 
-def is_valid_socket(sock):
-    try:
-        if sock.fileno() == -1 or sock is None:
-            return False
-        
-        sock.getpeername()
-        return True
-    except Exception:
-        return False
+def is_valid_socket(sock: socket):
+    return sock is not None and not sock.fileno() == -1

@@ -4,7 +4,6 @@ from network.protocol import Message, MessageType, Address
 from network.socket import recv_all_data, recv_all_data_udp, is_valid_socket
 from threading import Thread
 from uuid import UUID
-from time import sleep
 
 ADDRESS_ANY = ("", 0)
 
@@ -123,7 +122,7 @@ class Client:
         
     def handle_udp_message(self):
         try:
-            while self.initialized and not self.shutdown:
+            while self.initialized and not self.shutdown and is_valid_socket(self.udp):
                 buf, addr = recv_all_data_udp(self.udp)
                 msg = Message.from_string(buf)
 
@@ -131,6 +130,11 @@ class Client:
                     logging.info(f"Received <ANONTEST> from server: {msg.body['message']}", True)
                     continue
                 logging.info(f"Received <{MessageType(msg.header.type).name}> message from server", True)
+        except OSError as e:
+            if e.errno == 10038 and not self.initialized:
+                return
+            else:
+                logging.error(f"Something went wrong in UDP listener thread: {e}")
         except Exception as e:
             logging.error(f"Something went wrong in UDP listener thread: {e}")
             return

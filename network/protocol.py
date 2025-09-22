@@ -15,10 +15,12 @@ class MessageType(IntEnum):
     IDENTITY = 5,
     DISCONNECT = 6,
 
-    ANONTEST = 7
+    ANONTEST = 7,
+    CLIENTLIST = 8
 
 UnverifiedOkMessageType = [
-    MessageType.ANONTEST
+    MessageType.ANONTEST,
+    MessageType.CLIENTLIST
 ]
 
 class MessageHeader:
