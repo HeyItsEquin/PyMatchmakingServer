@@ -5,6 +5,7 @@ from network.protocol import *
 from client.client import *
 from uuid import *
 from util.config import *
+from time import sleep
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-t", "--type")
@@ -24,9 +25,17 @@ if not name:
 if verbose:
     CFG["verbose"] = True
 
+def __stall():
+    try:
+        while True:
+            sleep(0.025)
+    except KeyboardInterrupt:
+        return
+
 if prog_type == "c" or prog_type == "client":
     cl = Client()
-    cl.connect(name)
+    cl.connect()
+    __stall()
     cl.cleanup()
 
 if prog_type == "s" or prog_type == "server":

@@ -188,6 +188,14 @@ class Server:
                 res.body["message"] = "Blahblahblahblah :3"
 
                 res.sendto(self.udp, addr)
+            if msg.header.type == MessageType.CLIENTLIST:
+                res = Message()
+                res.header.type = MessageType.CLIENTLIST
+                res.header.name = "<SERVER>"
+                res.header.id = -1
+                res.body["clients"] = self.manager.client_list()
+
+                res.sendto(self.udp, addr)
         except Exception as e:
             logging.error(f"Something went wrong parsing UDP request: {e}")
 

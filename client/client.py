@@ -4,6 +4,7 @@ from network.protocol import Message, MessageType, Address
 from network.socket import recv_all_data, recv_all_data_udp, is_valid_socket
 from threading import Thread
 from uuid import UUID
+from json import loads, dumps
 
 ADDRESS_ANY = ("", 0)
 
@@ -24,7 +25,7 @@ class Client:
     initialized: bool
     shutdown: bool
     
-    def __init__(self):
+    def __init__(self, name):
         self.tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.udp_thread = Thread(target=self.handle_udp_message)
@@ -36,6 +37,14 @@ class Client:
         self.addr = ("", 0)
         self.server_tcp_addr = ("127.0.0.1", 8001)
         self.server_udp_addr = ("127.0.0.1", 8002)
+
+        self.tcp.connect(self.server_tcp_addr)
+        self.udp.bind(ADDRESS_ANY)
+
+        self.initialized = True
+        self.udp_thread.start()
+
+        self.name = name
         
     def __cleanup(self):
         try:
@@ -170,17 +179,18 @@ class Client:
             logging.error(f"Something went wrong trying to send anonymous message: {e}")
             return        
 
-    def connect(self, name: str):
+    def get_clients(self):
         try:
-            self.tcp.connect(self.server_tcp_addr)
-            self.udp.bind(ADDRESS_ANY)
+            self.send_anon_udp_message(MessageType.CLIENTLIST)
 
-            self.initialized = True
+            buf, addr = recv_all_data_udp(self.udp)
 
-            self.udp_thread.start()
+            logging.info(dumps(loads(buf), indent=4))
+        except Exception as e:
+            logging.error(f"Something went wrong retrieving client list: {e}")
 
-            self.send_anon_udp_message(MessageType.ANONTEST)
-
+    def connect(self):
+        try:
             logging.info("Connected to server")
             logging.info("Initializing TCP handshake")
             
@@ -188,7 +198,7 @@ class Client:
 
             self.connected = True
 
-            self.set_server_identity(name)
+            self.set_server_identity(self.name)
         except ConnectionRefusedError as e:
             logging.error(f"Connection refused (is the server running?): {e}")
             self.__cleanup()
